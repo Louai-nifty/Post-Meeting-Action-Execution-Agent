@@ -35,3 +35,4 @@ dist/
 tests/
 context.md
 lessons.md
+config.py
