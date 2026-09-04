@@ -36,3 +36,8 @@ tests/
 context.md
 lessons.md
 config.py
+
+.hermes.md
+agent.md
+assets/
+progress.md
