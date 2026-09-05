@@ -35,21 +35,36 @@ async def process_webhook(agent, payload: FathomWebhook):
         call_data = {}
         for field in fields:
             if field.label == "call owner":
-                call_data['call_owner'] = field.value
+                call_data['call_owner_email'] = field.value
             if field.label == "meeting title":
                 call_data['meeting_title'] = field.value
             if field.label == "meeting type":
                 call_data['meeting_type'] = field.value
             if field.label == "meeting url":
-                call_data['meeting_url'] = field.value
+                call_data['recording_url'] = field.value
             if field.label == "meeting date":
                 call_data['meeting_date'] = field.value
             if field.label == "meeting attendees":
-                call_data['meeting_attendees'] = field.value
+                call_data['attendees_list'] = field.value
             if field.label == "meeting transcript":
-                call_data['meeting_transcript'] = field.value
+                call_data['raw_transcript'] = field.value
 
 
-        return response
+        supabase.table('meetings').insert(call_data).execute()
+
+        meeting_id = supabase.table('meetings').select("meeting_id").eq("call_owner_email", call_data['call_owner_email']).execute()
+
+        await agent.ainvoke({
+            "meeting_id": meeting_id,
+            "raw_transcript": call_data['raw_transcript'],
+            "meeting_title": call_data['meeting_title'],
+            "meeting_date": call_data['meeting_date'],
+            "meeting_type": call_data['meeting_type'],
+            "meeting_attendees": call_data['attendees_list'],
+            "call_owner_email": call_data['call_owner_email'],
+        },
+            config={"configurable": {"thread_id": str(meeting_id)}}
+        )
     except Exception as e:
-        print(e)
+        logger.error(f"Agent run with thread_id: {meeting_id} failed {str(e)}", exc_info=True)
+        
