@@ -1,6 +1,6 @@
 from datetime import date
 
-def build_extraction_prompt(transcript: str, meeting_date: date, meeting_type: str) -> tuple[str, str]:
+def extraction_prompt(transcript: str, meeting_date: date, meeting_type: str) -> tuple[str, str]:
     """Returns (system_prompt, user_prompt) for Phase 2 extraction."""
     
     system = """You are a meeting intelligence extractor. Your job is to analyze sales meeting transcripts and extract structured business outcomes.
