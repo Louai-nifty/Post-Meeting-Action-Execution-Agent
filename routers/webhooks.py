@@ -50,21 +50,28 @@ async def process_webhook(agent, payload: FathomWebhook):
                 call_data['raw_transcript'] = field.value
 
 
-        supabase.table('meetings').insert(call_data).execute()
+        insert_res = supabase.table('meetings').insert(call_data).execute()
+        meeting_id = None
+        if insert_res.data and len(insert_res.data) > 0:
+            meeting_id = insert_res.data[0].get("meeting_id") or insert_res.data[0].get("id")
+        
+        if not meeting_id:
+            query_res = supabase.table('meetings').select("meeting_id").eq("call_owner_email", call_data.get('call_owner_email')).execute()
+            if query_res.data and len(query_res.data) > 0:
+                meeting_id = query_res.data[0].get("meeting_id")
 
-        meeting_id = supabase.table('meetings').select("meeting_id").eq("call_owner_email", call_data['call_owner_email']).execute()
+        meeting_id_str = str(meeting_id) if meeting_id else "meeting_thread"
 
         await agent.ainvoke({
-            "meeting_id": meeting_id,
-            "raw_transcript": call_data['raw_transcript'],
-            "meeting_title": call_data['meeting_title'],
-            "meeting_date": call_data['meeting_date'],
-            "meeting_type": call_data['meeting_type'],
-            "meeting_attendees": call_data['attendees_list'],
-            "call_owner_email": call_data['call_owner_email'],
+            "meeting_id": meeting_id_str,
+            "raw_transcript": call_data.get('raw_transcript', ''),
+            "meeting_title": call_data.get('meeting_title', ''),
+            "meeting_date": call_data.get('meeting_date', ''),
+            "meeting_type": call_data.get('meeting_type', ''),
+            "meeting_attendees": call_data.get('attendees_list', []),
+            "call_owner_email": call_data.get('call_owner_email', ''),
         },
-            config={"configurable": {"thread_id": str(meeting_id)}}
+            config={"configurable": {"thread_id": meeting_id_str}}
         )
     except Exception as e:
-        logger.error(f"Agent run with thread_id: {meeting_id} failed {str(e)}", exc_info=True)
-        
+        logger.error(f"Agent run failed: {str(e)}", exc_info=True)
