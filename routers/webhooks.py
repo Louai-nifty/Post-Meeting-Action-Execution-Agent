@@ -50,6 +50,28 @@ async def process_webhook(agent, payload: FathomWebhook):
                 call_data['raw_transcript'] = field.value
 
 
+        # --- Idempotency Guard ---
+        # Webhook providers (Fathom, Tally, etc.) can replay the same event on
+        # network timeouts or retries. Before inserting, we check if this exact
+        # meeting was already processed. The fingerprint is the combination of
+        # (call_owner_email + meeting_title + meeting_date) — unique enough to
+        # identify a specific meeting belonging to a specific person on a specific day.
+        existing_res = (
+            supabase.table('meetings')
+            .select("meeting_id")
+            .eq("call_owner_email", call_data.get('call_owner_email', ''))
+            .eq("meeting_title", call_data.get('meeting_title', ''))
+            .eq("meeting_date", call_data.get('meeting_date', ''))
+            .execute()
+        )
+        if existing_res.data and len(existing_res.data) > 0:
+            logger.warning(
+                f"Duplicate webhook detected for meeting '{call_data.get('meeting_title')}' "
+                f"on {call_data.get('meeting_date')} — already processed. Skipping."
+            )
+            return
+        # --- End Idempotency Guard ---
+
         insert_res = supabase.table('meetings').insert(call_data).execute()
         meeting_id = None
         if insert_res.data and len(insert_res.data) > 0:
@@ -74,4 +96,4 @@ async def process_webhook(agent, payload: FathomWebhook):
             config={"configurable": {"thread_id": meeting_id_str}}
         )
     except Exception as e:
-        logger.error(f"Agent run failed: {str(e)}", exc_info=True)
+        logger.error(f"Agent run failed: {str(e)}", exc_info=True)
