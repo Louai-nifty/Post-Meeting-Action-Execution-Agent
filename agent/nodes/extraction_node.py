@@ -33,5 +33,15 @@ async def extraction_node(state: AgentState | dict) -> dict:
             "status": "extracted"
         }
     except Exception as e:
+        # --- Graceful Degradation Pattern ---
+        # A node should never crash the entire graph run by raising.
+        # The graph is the decision-maker — the node's job is to report
+        # what happened clearly via state, then let the graph route accordingly
+        # (e.g. a conditional edge can check status == "extraction_failed"
+        # and route to a fallback node or a human escalation node).
         logger.error(f"Extraction node failed for meeting '{meeting_title}': {str(e)}", exc_info=True)
-        raise e
+        return {
+            "status": "extraction_failed",
+            "error_message": str(e)
+        }
+        # --- End Graceful Degradation Pattern ---
