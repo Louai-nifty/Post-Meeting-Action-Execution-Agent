@@ -11,4 +11,5 @@ class AgentState(BaseModel):
     meeting_attendees: List[str] = Field(description="List of attendees")
     call_owner_email: EmailStr
     extracted_data: Optional[MeetingExtraction] = Field(default=None, description="Extracted meeting intelligence from Phase 2")
-    status: Optional[str] = Field(default="ingested", description="Current workflow state")
+    status: Optional[str] = Field(default="ingested", description="Current workflow state")
+    error_message: Optional[str] = Field(default=None, description="Failure reason if a node encountered an error")
