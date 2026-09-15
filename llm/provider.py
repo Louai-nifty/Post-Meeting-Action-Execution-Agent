@@ -4,6 +4,9 @@ from pydantic import BaseModel, ValidationError
 import asyncio
 from llm_config import llm_config
 from config import base_url, llm_api_key
+from utils.loggings import get_logger
+
+logger = get_logger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -63,9 +66,19 @@ class LLMClient:
                 await asyncio.sleep(2 ** (attempt - 1))
 
     async def _log_cost(self, usage, model: str):
-        pass
+        logger.info(
+            f"[LLM Cost] model={model} | "
+            f"prompt_tokens={usage.prompt_tokens} | "
+            f"completion_tokens={usage.completion_tokens} | "
+            f"total_tokens={usage.total_tokens}"
+        )
 
     async def _log_failure(self, system: str, user: str, error: Exception):
-        pass
+        logger.error(
+            f"[LLM Failure] error_type={type(error).__name__} | "
+            f"error={str(error)} | "
+            f"system_prompt_chars={len(system)} | "
+            f"user_prompt_preview={user[:120]!r}"
+        )
 
 llm_client = LLMClient()
